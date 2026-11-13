@@ -9,9 +9,9 @@ use runvil::{
         Completion, CompletionOptions, Message, ModelBinding, ModelCatalog, ToolSchema,
         make_completion_error, phrase,
     },
-    plugin::{HostServices, PackRegistry},
+    plugin::PackRegistry,
 };
-use serde_json::{Value, json};
+use serde_json::json;
 use std::{
     env, error, fs, io,
     path::{Path, PathBuf},
@@ -74,7 +74,6 @@ async fn run(
     let folder = prompt.parent().map(Path::to_owned).unwrap_or_default();
 
     let mut registry = PackRegistry::new();
-    plugin_std::install(&mut registry, Value::Null, &HostServices::new())?;
     nash::install(&mut registry, server)?;
     let host = Arc::new(Host {
         packs: Packs::new(registry),
@@ -183,6 +182,7 @@ impl Timer for Clock {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::Value;
     use std::{
         io::{Read, Write},
         net::TcpListener,
@@ -195,7 +195,7 @@ mod tests {
         let outputs = folder.join("outputs");
         fs::create_dir_all(&folder).unwrap();
         let prompt = folder.join("2026.greet.md");
-        let source = "---\nname: greet\ndescription: Greets the argument\nrunvil: 0\nuses:\n  - std\n---\n\n# Greet\n\n## Answer\n\n```lua\nreturn 'Hello, ' .. args .. '.'\n```\n";
+        let source = "---\nname: greet\ndescription: Greets the argument\nrunvil: 0\n---\n\n# Greet\n\n## Answer\n\n```lua\nreturn 'Hello, ' .. args .. '.'\n```\n";
         fs::write(&prompt, source).unwrap();
 
         let written = run(
@@ -243,7 +243,7 @@ mod tests {
         let outputs = folder.join("outputs");
         fs::create_dir_all(&folder).unwrap();
         let prompt = folder.join("reach.md");
-        let source = "---\nname: reach\ndescription: Sends one request to the Nash host\nrunvil: 0\nuses:\n  - kirill/nash\n---\n\n# Reach\n\n## Send\n\n```lua\nreturn tools.call('nash/request', { method = 'PUT', path = '/api/players/Prisoner%20A', body = '{\"summary\":\"x\"}' })\n```\n";
+        let source = "---\nname: reach\ndescription: Sends one request to the Nash host\nrunvil: 0\nuses:\n  - kirill/nash\n---\n\n# Reach\n\n## Send\n\n```lua\nreturn json.encode(tools.call('nash/request', { method = 'PUT', path = '/api/players/Prisoner%20A', body = '{\"summary\":\"x\"}' }))\n```\n";
         fs::write(&prompt, source).unwrap();
 
         let written = run(&prompt, &outputs, String::new(), Arc::new(Offline), &server)
